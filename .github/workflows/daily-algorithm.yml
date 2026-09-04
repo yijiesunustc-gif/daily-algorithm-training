@@ -4,9 +4,7 @@ on:
   push:
     branches:
       - main
-
   workflow_dispatch:
-
   schedule:
     - cron: "30 10 * * *"
 
@@ -20,16 +18,17 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.x"
 
-      - name: Check repository structure
+      - name: Ensure directories exist
         run: |
-          test -d daily
-          test -d templates
+          mkdir -p daily templates
 
       - name: Check daily files
         run: |
@@ -38,7 +37,6 @@ jobs:
           import re
 
           daily_dir = Path("daily")
-
           files = sorted(daily_dir.glob("*.md"))
 
           if not files:
@@ -49,25 +47,13 @@ jobs:
 
           for file in files:
               if not pattern.match(file.name):
-                  raise SystemExit(
-                      f"Invalid daily filename: {file.name}"
-                  )
+                  raise SystemExit(f"Invalid daily filename: {file.name}")
 
               content = file.read_text(encoding="utf-8")
-
-              count = len(
-                  re.findall(
-                      r"^# Problem [12]\s*$",
-                      content,
-                      re.MULTILINE
-                  )
-              )
+              count = len(re.findall(r"^# Problem [12]\s*$", content, re.MULTILINE))
 
               if count != 2:
-                  raise SystemExit(
-                      f"{file}: expected exactly 2 problems, found {count}"
-                  )
-
+                  raise SystemExit(f"{file}: expected exactly 2 problems, found {count}")
               print(f"✓ {file}: 2 problems")
 
           print("All daily files passed.")
@@ -77,12 +63,8 @@ jobs:
         run: |
           python <<'PY'
           from pathlib import Path
-
           daily_dir = Path("daily")
-          files = sorted(
-              daily_dir.glob("*.md"),
-              reverse=True
-          )
+          files = sorted(daily_dir.glob("*.md"), reverse=True)
 
           lines = [
               "# Algorithm Training Index",
@@ -92,17 +74,11 @@ jobs:
               "| 日期 | 训练内容 |",
               "|---|---|",
           ]
-
           for file in files:
               date = file.stem
-              lines.append(
-                  f"| {date} | [每日训练](daily/{file.name}) |"
-              )
+              lines.append(f"| {date} | [每日训练](daily/{file.name}) |")
 
-          Path("INDEX.md").write_text(
-              "\n".join(lines) + "\n",
-              encoding="utf-8"
-          )
+          Path("INDEX.md").write_text("\n".join(lines)+"\n", encoding="utf-8")
           PY
 
       - name: Commit generated index
