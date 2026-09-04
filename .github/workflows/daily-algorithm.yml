@@ -30,13 +30,15 @@ jobs:
         run: |
           mkdir -p daily templates
 
-      - name: Check daily files
+      - name: Check daily files (skip problem‑count check for today's new file)
         run: |
           python <<'PY'
           from pathlib import Path
           import re
+          from datetime import date
 
           daily_dir = Path("daily")
+          today_name = f"{date.today()}.md"
           files = sorted(daily_dir.glob("*.md"))
 
           if not files:
@@ -50,8 +52,12 @@ jobs:
                   raise SystemExit(f"Invalid daily filename: {file.name}")
 
               content = file.read_text(encoding="utf-8")
-              count = len(re.findall(r"^# Problem [12]\s*$", content, re.MULTILINE))
+              # 当天新建的文件，不校验题目数量
+              if file.name == today_name:
+                  print(f"✓ {file}: today's new file, skip problem count check")
+                  continue
 
+              count = len(re.findall(r"^# Problem [12]\s*$", content, re.MULTILINE))
               if count != 2:
                   raise SystemExit(f"{file}: expected exactly 2 problems, found {count}")
               print(f"✓ {file}: 2 problems")
