@@ -1,0 +1,120 @@
+name: Daily Algorithm Repository Check
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+  schedule:
+    - cron: "30 10 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  check-daily-training:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Check repository structure
+        run: |
+          test -d daily
+          test -d templates
+
+      - name: Check daily files
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          import re
+
+          daily_dir = Path("daily")
+
+          files = sorted(daily_dir.glob("*.md"))
+
+          if not files:
+              print("No daily training files yet.")
+              raise SystemExit(0)
+
+          pattern = re.compile(r"^\d{4}-\d{2}-\d{2}\.md$")
+
+          for file in files:
+              if not pattern.match(file.name):
+                  raise SystemExit(
+                      f"Invalid daily filename: {file.name}"
+                  )
+
+              content = file.read_text(encoding="utf-8")
+
+              count = len(
+                  re.findall(
+                      r"^# Problem [12]\s*$",
+                      content,
+                      re.MULTILINE
+                  )
+              )
+
+              if count != 2:
+                  raise SystemExit(
+                      f"{file}: expected exactly 2 problems, found {count}"
+                  )
+
+              print(f"✓ {file}: 2 problems")
+
+          print("All daily files passed.")
+          PY
+
+      - name: Generate training index
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          daily_dir = Path("daily")
+          files = sorted(
+              daily_dir.glob("*.md"),
+              reverse=True
+          )
+
+          lines = [
+              "# Algorithm Training Index",
+              "",
+              "> 自动生成，请勿手动修改。",
+              "",
+              "| 日期 | 训练内容 |",
+              "|---|---|",
+          ]
+
+          for file in files:
+              date = file.stem
+              lines.append(
+                  f"| {date} | [每日训练](daily/{file.name}) |"
+              )
+
+          Path("INDEX.md").write_text(
+              "\n".join(lines) + "\n",
+              encoding="utf-8"
+          )
+          PY
+
+      - name: Commit generated index
+        run: |
+          if git diff --quiet; then
+            echo "No changes."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add INDEX.md
+          git commit -m "chore: update algorithm training index"
+          git push
