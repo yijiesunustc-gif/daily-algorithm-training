@@ -1,4 +1,4 @@
-#日常算法训练
+# Daily Algorithm Training
 
 我的每日算法训练仓库，用于持续提升算法能力，并服务于考研 / 软件工程算法准备。
 
@@ -12,14 +12,14 @@
 
 ## 仓库结构
 
-```文本
-每日算法训练/
-├--README.md
-├--索引.钔
-├--每日/
+```text
+daily-algorithm-training/
+├── README.md
+├--索引.md
+├── daily/
 │   └── YYYY-MM-DD.md
-├--模板/
-│└--每日模板.md
-└--.github/
-└--工作流/
-└--每日算法.yml
+├── templates/
+│   └── daily-template.md
+└── .github/
+    └── workflows/
+        └── daily-algorithm.yml
